@@ -508,12 +508,12 @@ class BilibiliCrawler(AbstractCrawler):
                     "height": 1080
                 },
                 user_agent=user_agent,
-                channel="chrome",  # Use system's stable Chrome version
+                executable_path=os.environ.get("CHROMIUM_PATH", "/mnt/workspace/yinghaotian/.cache/ms-playwright/chromium-1124/chrome-linux/chrome"),
             )
             return browser_context
         else:
             # type: ignore
-            browser = await chromium.launch(headless=headless, proxy=playwright_proxy, channel="chrome")
+            browser = await chromium.launch(headless=headless, proxy=playwright_proxy, executable_path=os.environ.get("CHROMIUM_PATH", "/mnt/workspace/yinghaotian/.cache/ms-playwright/chromium-1124/chrome-linux/chrome"))
             browser_context = await browser.new_context(viewport={"width": 1920, "height": 1080}, user_agent=user_agent)
             return browser_context
 

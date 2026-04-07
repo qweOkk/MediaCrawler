@@ -57,11 +57,11 @@ CDP_DEBUG_PORT = 9222
 # If it is empty, the system will automatically detect the installation path of Chrome/Edge
 # Windows example: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
 # macOS example: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-CUSTOM_BROWSER_PATH = ""
+CUSTOM_BROWSER_PATH = "/mnt/workspace/yinghaotian/.cache/ms-playwright/chromium-1124/chrome-linux/chrome"
 
 # Whether to enable headless mode in CDP mode
 # NOTE: Even if set to True, some anti-detection features may not work well in headless mode
-CDP_HEADLESS = False
+CDP_HEADLESS = True
 
 # Browser startup timeout (seconds)
 BROWSER_LAUNCH_TIMEOUT = 60
