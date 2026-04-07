@@ -98,8 +98,11 @@ def show_qrcode(qr_code) -> None:  # type: ignore
     new_image.paste(image, (10, 10))
     draw = ImageDraw.Draw(new_image)
     draw.rectangle((0, 0, width + 19, height + 19), outline=(0, 0, 0), width=1)
-    del ImageShow.UnixViewer.options["save_all"]
-    new_image.show()
+    # Headless 服务器：不调用 image.show()（会触发 xdg-open 失败），改为存盘
+    out_path = "/tmp/mc_qrcode.png"
+    new_image.save(out_path)
+    print(f"\n[QRCODE] saved to: {out_path}", flush=True)
+    print(f"[QRCODE] 在你本地执行: scp -P 30245 root@10.27.130.23:{out_path} ./mc_qrcode.png && open mc_qrcode.png\n", flush=True)
 
 
 def get_user_agent() -> str:

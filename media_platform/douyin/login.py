@@ -56,8 +56,9 @@ class DouYinLogin(AbstractLogin):
             The verification accuracy of the slider verification is not very good... If there are no special requirements, it is recommended not to use Douyin login, or use cookie login
         """
 
-        # popup login dialog
-        await self.popup_login_dialog()
+        # popup login dialog (cookie 登录时不需要，否则会卡死等弹窗)
+        if config.LOGIN_TYPE != "cookie":
+            await self.popup_login_dialog()
 
         # select login type
         if config.LOGIN_TYPE == "qrcode":

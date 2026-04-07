@@ -38,7 +38,7 @@ IP_PROXY_PROVIDER_NAME = "kuaidaili"  # kuaidaili | wandouhttp
 # Setting False will open a browser
 # If Xiaohongshu keeps scanning the code to log in but fails, open the browser and manually pass the sliding verification code.
 # If Douyin keeps prompting failure, open the browser and see if mobile phone number verification appears after scanning the QR code to log in. If it does, manually go through it and try again.
-HEADLESS = False
+HEADLESS = True
 
 # Whether to save login status
 SAVE_LOGIN_STATE = True
@@ -47,7 +47,7 @@ SAVE_LOGIN_STATE = True
 # Whether to enable CDP mode - use the user's existing Chrome/Edge browser to crawl, providing better anti-detection capabilities
 # Once enabled, the user's Chrome/Edge browser will be automatically detected and started, and controlled through the CDP protocol.
 # This method uses the real browser environment, including the user's extensions, cookies and settings, greatly reducing the risk of detection.
-ENABLE_CDP_MODE = False
+ENABLE_CDP_MODE = True
 
 # CDP debug port, used to communicate with the browser
 # If the port is occupied, the system will automatically try the next available port
@@ -57,7 +57,7 @@ CDP_DEBUG_PORT = 9222
 # If it is empty, the system will automatically detect the installation path of Chrome/Edge
 # Windows example: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
 # macOS example: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-CUSTOM_BROWSER_PATH = "/mnt/workspace/yinghaotian/.cache/ms-playwright/chromium-1124/chrome-linux/chrome"
+CUSTOM_BROWSER_PATH = "/root/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome"
 
 # Whether to enable headless mode in CDP mode
 # NOTE: Even if set to True, some anti-detection features may not work well in headless mode
