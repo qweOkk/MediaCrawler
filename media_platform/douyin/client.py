@@ -20,6 +20,7 @@
 import asyncio
 import copy
 import json
+import os
 import urllib.parse
 from typing import TYPE_CHECKING, Any, Callable, Dict, Union, Optional
 
@@ -58,6 +59,8 @@ class DouYinClient(AbstractApiClient, ProxyRefreshMixin):
         self._host = "https://www.douyin.com"
         self.playwright_page = playwright_page
         self.cookie_dict = cookie_dict
+        # 媒体下载计数器，用于在进度日志里显示 "第几个文件"
+        self._media_dl_count = 0
         # Initialize proxy pool (from ProxyRefreshMixin)
         self.init_proxy_pool(proxy_ip_pool)
 
@@ -334,18 +337,79 @@ class DouYinClient(AbstractApiClient, ProxyRefreshMixin):
         return result
 
     async def get_aweme_media(self, url: str) -> Union[bytes, None]:
-        async with make_async_client(proxy=self.proxy) as client:
-            try:
-                response = await client.request("GET", url, timeout=self.timeout, follow_redirects=True)
-                response.raise_for_status()
-                if not response.reason_phrase == "OK":
-                    utils.logger.error(f"[DouYinClient.get_aweme_media] request {url} err, res:{response.text}")
+        self._media_dl_count += 1
+        idx = self._media_dl_count
+        # 单文件大小上限（字节），通过环境变量 MC_MEDIA_MAX_BYTES 配置；
+        # 默认 5GB（基本不会触发，先把开关留好）。超过则跳过下载。
+        try:
+            max_bytes = int(os.environ.get("MC_MEDIA_MAX_BYTES", str(5 * 1024 * 1024 * 1024)))
+        except (TypeError, ValueError):
+            max_bytes = 5 * 1024 * 1024 * 1024
+        max_attempts = 3
+        backoff_base = 2.0
+        short_url = url[:60] + ("..." if len(url) > 60 else "")
+
+        for attempt in range(1, max_attempts + 1):
+            async with make_async_client(proxy=self.proxy) as client:
+                try:
+                    # 流式下载，避免大视频整块占内存；按 chunk 输出进度日志。
+                    async with client.stream(
+                        "GET", url, timeout=self.timeout, follow_redirects=True
+                    ) as response:
+                        response.raise_for_status()
+                        if response.reason_phrase != "OK":
+                            utils.logger.error(
+                                f"[DouYinClient.get_aweme_media] [#{idx}] request {url} err, status={response.status_code}"
+                            )
+                            return None
+                        total = int(response.headers.get("content-length", 0))
+                        if 0 < max_bytes < total:
+                            utils.logger.warning(
+                                f"[DouYinClient.get_aweme_media] [#{idx}] {short_url} skip: "
+                                f"size {total/1024/1024:.1f}MB > limit {max_bytes/1024/1024:.0f}MB"
+                            )
+                            return None
+                        chunks: list[bytes] = []
+                        downloaded = 0
+                        next_log = 8 * 1024 * 1024  # 每 8MB 打一行
+                        async for chunk in response.aiter_bytes(chunk_size=65536):
+                            if chunk:
+                                chunks.append(chunk)
+                                downloaded += len(chunk)
+                                if downloaded >= next_log:
+                                    if total > 0:
+                                        pct = downloaded * 100 / total
+                                        utils.logger.info(
+                                            f"[DouYinClient.get_aweme_media] [#{idx}] {short_url} "
+                                            f"{downloaded/1024/1024:.1f}/{total/1024/1024:.1f}MB ({pct:.0f}%)"
+                                        )
+                                    else:
+                                        utils.logger.info(
+                                            f"[DouYinClient.get_aweme_media] [#{idx}] {short_url} "
+                                            f"{downloaded/1024/1024:.1f}MB (size unknown)"
+                                        )
+                                    next_log += 8 * 1024 * 1024
+                        if total > 0 and downloaded != total:
+                            # 短读视为本次失败，触发 retry
+                            raise httpx.RemoteProtocolError(
+                                f"short read {downloaded}/{total} bytes",
+                                request=response.request,
+                            )
+                        return b"".join(chunks)
+                except httpx.HTTPError as exc:
+                    if attempt < max_attempts:
+                        wait = backoff_base * attempt
+                        utils.logger.warning(
+                            f"[DouYinClient.get_aweme_media] [#{idx}] {exc.__class__.__name__} attempt {attempt}/{max_attempts}, "
+                            f"retry in {wait:.1f}s: {exc}"
+                        )
+                        await asyncio.sleep(wait)
+                        continue
+                    utils.logger.error(
+                        f"[DouYinClient.get_aweme_media] [#{idx}] {exc.__class__.__name__} after {max_attempts} attempts: {exc}"
+                    )
                     return None
-                else:
-                    return response.content
-            except httpx.HTTPError as exc:  # some wrong when call httpx.request method, such as connection error, client error, server error or response status code is not 2xx
-                utils.logger.error(f"[DouYinClient.get_aweme_media] {exc.__class__.__name__} for {exc.request.url} - {exc}")  # Keep the original exception type name for developers to debug
-                return None
+        return None
 
     async def resolve_short_url(self, short_url: str) -> str:
         """
