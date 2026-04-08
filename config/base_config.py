@@ -83,13 +83,16 @@ USER_DATA_DIR = "%s_user_data_dir"  # %s will be replaced by platform name
 START_PAGE = 1
 
 # Control the number of crawled videos/posts
-CRAWLER_MAX_NOTES_COUNT = 15
+# 支持环境变量覆盖，调用方（如 Emilia2Crawler MediaCrawlerAdapter）可按 spec.max_items 动态注入
+import os as _os
+CRAWLER_MAX_NOTES_COUNT = int(_os.environ.get("CRAWLER_MAX_NOTES_COUNT", "15"))
 
 # Controlling the number of concurrent crawlers
 MAX_CONCURRENCY_NUM = 1
 
 # Whether to enable crawling media mode (including image or video resources), crawling media is not enabled by default
-ENABLE_GET_MEIDAS = False
+# 支持环境变量覆盖：Emilia2Crawler MediaCrawlerAdapter 通过 MC_ENABLE_GET_MEDIAS 注入
+ENABLE_GET_MEIDAS = _os.environ.get("MC_ENABLE_GET_MEDIAS", "false").lower() in {"1", "true", "yes", "y", "t"}
 
 # Whether to enable comment crawling mode. Comment crawling is enabled by default.
 ENABLE_GET_COMMENTS = True
